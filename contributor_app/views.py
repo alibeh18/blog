@@ -1,5 +1,10 @@
 from django.core.exceptions import PermissionDenied
-from .models import UserProfile, DataEntry
+from .models import UserProfile, DataEntry, CustomUser
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from .serializers import CustomUserSerializer
 
 def check_user_role(user, is_manager_required=False):
     if not user.is_authenticated:
@@ -18,3 +23,14 @@ def view_data_entries(request):
     user = request.user
     check_user_role(user)
     return DataEntry.objects.all()
+
+class CreateCustomUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        check_user_role(request.user, is_manager_required=True)
+        serializer = CustomUserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
